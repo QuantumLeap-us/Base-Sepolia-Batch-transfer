@@ -31,8 +31,18 @@ sendButton.addEventListener('click', async () => {
 
   for (const privateKey of privateKeys) {
     try {
-      const transactions = await sendTransactions(privateKey, toAddresses);
+      const balance = await getBalance(privateKey);
+      outputDiv.innerHTML += `Balance for account ${privateKey.slice(0, 6)}...: ${balance} ETH<br>`;
+
+      // 如果余额不足，跳过这个账户
+      if (parseFloat(balance) <= 0) {
+        outputDiv.innerHTML += `Account ${privateKey.slice(0, 6)}... has insufficient balance. Skipping this account.<br><br>`;
+        continue;
+      }
+
+      const transactions = await sendTransactions(privateKey, toAddresses, balance);
       numTransactions += transactions.length;
+
       transactions.forEach(({ transactionHash, from, to, value }, index) => {
         outputDiv.innerHTML += `Transaction #${numTransactions - transactions.length + index + 1} sent from ${from} with hash: <a href="https://holesky.etherscan.io/tx/${transactionHash}" rel="noopener" target="_blank">${transactionHash}</a><br>`;
         outputDiv.innerHTML += `Sent ${value} ETH to ${to}<br><br>`;
@@ -48,15 +58,19 @@ sendButton.addEventListener('click', async () => {
   }
 });
 
-async function sendTransactions(privateKey, toAddresses) {
+async function getBalance(privateKey) {
   const account = web3.eth.accounts.privateKeyToAccount(privateKey);
   const balance = await web3.eth.getBalance(account.address);
+  return web3.utils.fromWei(balance, 'ether'); // 转换为 ETH 单位
+}
 
+async function sendTransactions(privateKey, toAddresses, senderBalance) {
+  const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+  const balance = web3.utils.toWei(senderBalance, 'ether'); // 将余额转换为 Wei
   const currentGasPrice = await web3.eth.getGasPrice();
   const priorityFee = web3.utils.toWei('1.5', 'gwei');
   const gasPrice = web3.utils.toBN(currentGasPrice).add(web3.utils.toBN(priorityFee));
 
-  // 计算总的gas费用
   const totalGasCost = await calculateGasCost(account.address, toAddresses, gasPrice);
   const availableBalance = web3.utils.toBN(balance).sub(totalGasCost);
 
@@ -70,6 +84,10 @@ async function sendTransactions(privateKey, toAddresses) {
 
   for (const toAddress of toAddresses) {
     try {
+      // 添加 3-5 秒的延迟
+      const delayTime = Math.floor(Math.random() * (5000 - 3000 + 1)) + 3000; // 随机生成 3-5 秒
+      await new Promise(resolve => setTimeout(resolve, delayTime));
+
       const receipt = await sendSingleTransaction(account, toAddress, valuePerTransaction, gasPrice);
       transactions.push({
         transactionHash: receipt.transactionHash,
