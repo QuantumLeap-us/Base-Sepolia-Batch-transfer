@@ -1,142 +1,78 @@
 const sendForm = document.getElementById('send-form');
 const sendButton = document.getElementById('send-button');
 const outputDiv = document.getElementById('output');
+const gasSpeedSelector = document.getElementById('gas-speed');
 
-// 创建全局 Web3 实例
+// 创建 Web3 实例
 const web3 = new Web3(new Web3.providers.HttpProvider('https://sepolia.base.org'));
 
 sendButton.addEventListener('click', async () => {
   const privateKeys = document.getElementById('private-key').value.split('\n')
-    .map(key => key.trim())
-    .filter(key => key !== '');
+    .map(key => key.trim()).filter(key => key !== '');
+  const toAddress = sendForm.elements['to-addresses'].value.trim();
+  const gasSpeedGwei = parseFloat(gasSpeedSelector.value); // 用户选择的 Gas 费用
 
-  const toAddresses = sendForm.elements['to-addresses'].value.split('\n')
-    .map(address => address.trim())
-    .filter(address => address !== '');
-
-  if (privateKeys.length === 0) {
-    outputDiv.textContent = 'Please enter at least one private key';
+  if (privateKeys.length === 0 || !web3.utils.isAddress(toAddress)) {
+    outputDiv.textContent = 'Please enter valid private keys and a valid recipient address.';
     return;
   }
 
-  if (toAddresses.length === 0) {
-    outputDiv.textContent = 'Please enter at least one recipient address';
-    return;
-  }
+  outputDiv.innerHTML = `Starting transactions...<br><br>`;
 
-  outputDiv.textContent = '';
-
-  let numTransactions = 0;
-  let numErrors = 0;
+  let successCount = 0;
+  let failedCount = 0;
 
   for (const privateKey of privateKeys) {
     try {
-      const balance = await getBalance(privateKey);
-      outputDiv.innerHTML += `Balance for account ${privateKey.slice(0, 6)}...: ${balance} ETH<br>`;
+      const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+      const balanceWei = await web3.eth.getBalance(account.address);
 
-      // 如果余额不足，跳过这个账户
-      if (parseFloat(balance) <= 0) {
-        outputDiv.innerHTML += `Account ${privateKey.slice(0, 6)}... has insufficient balance. Skipping this account.<br><br>`;
+      // 如果余额为 0，跳过该钱包
+      if (web3.utils.toBN(balanceWei).lte(web3.utils.toBN(0))) {
+        outputDiv.innerHTML += `Account ${account.address} has no balance. Skipping...<br>`;
         continue;
       }
 
-      const transactions = await sendTransactions(privateKey, toAddresses, balance);
-      numTransactions += transactions.length;
+      // 设置用户选择的 gas 价格
+      const gasPrice = web3.utils.toWei(gasSpeedGwei.toString(), 'gwei');
+      const gasLimit = 21000; // 普通转账的 gas limit
+      const gasCost = web3.utils.toBN(gasPrice).mul(web3.utils.toBN(gasLimit));
+      const valueToSend = web3.utils.toBN(balanceWei).sub(gasCost);
 
-      transactions.forEach(({ transactionHash, from, to, value }, index) => {
-        outputDiv.innerHTML += `Transaction #${numTransactions - transactions.length + index + 1} sent from ${from} with hash: <a href="https://holesky.etherscan.io/tx/${transactionHash}" rel="noopener" target="_blank">${transactionHash}</a><br>`;
-        outputDiv.innerHTML += `Sent ${value} ETH to ${to}<br><br>`;
-      });
-    } catch (error) {
-      numErrors++;
-      outputDiv.textContent += `Error sending transactions from ${error.from}: ${error.message}\n`;
-    }
-  }
+      // 如果余额不足支付 gas 费用，跳过
+      if (valueToSend.lte(web3.utils.toBN(0))) {
+        outputDiv.innerHTML += `Account ${account.address} has insufficient balance to cover gas fees. Skipping...<br>`;
+        continue;
+      }
 
-  if (numErrors > 0) {
-    outputDiv.textContent += `Failed to send ${numErrors} transaction${numErrors === 1 ? '' : 's'}\n`;
-  }
-});
-
-async function getBalance(privateKey) {
-  const account = web3.eth.accounts.privateKeyToAccount(privateKey);
-  const balance = await web3.eth.getBalance(account.address);
-  return web3.utils.fromWei(balance, 'ether'); // 转换为 ETH 单位
-}
-
-async function sendTransactions(privateKey, toAddresses, senderBalance) {
-  const account = web3.eth.accounts.privateKeyToAccount(privateKey);
-  const balance = web3.utils.toWei(senderBalance, 'ether'); // 将余额转换为 Wei
-  const currentGasPrice = await web3.eth.getGasPrice();
-  const priorityFee = web3.utils.toWei('1.5', 'gwei');
-  const gasPrice = web3.utils.toBN(currentGasPrice).add(web3.utils.toBN(priorityFee));
-
-  const totalGasCost = await calculateGasCost(account.address, toAddresses, gasPrice);
-  const availableBalance = web3.utils.toBN(balance).sub(totalGasCost);
-
-  if (availableBalance.lte(0)) {
-    throw new Error('Insufficient balance to pay for gas');
-  }
-
-  const valuePerTransaction = availableBalance.div(web3.utils.toBN(toAddresses.length)); // 平均分配余额
-
-  const transactions = [];
-
-  for (const toAddress of toAddresses) {
-    try {
-      // 添加 3-5 秒的延迟
-      const delayTime = Math.floor(Math.random() * (5000 - 3000 + 1)) + 3000; // 随机生成 3-5 秒
-      await new Promise(resolve => setTimeout(resolve, delayTime));
-
-      const receipt = await sendSingleTransaction(account, toAddress, valuePerTransaction, gasPrice);
-      transactions.push({
-        transactionHash: receipt.transactionHash,
+      // 构建交易对象
+      const txObject = {
         from: account.address,
         to: toAddress,
-        value: web3.utils.fromWei(valuePerTransaction, 'ether') + ' ETH'
-      });
+        value: valueToSend,
+        gas: gasLimit,
+        gasPrice: gasPrice
+      };
+
+      // 签名并发送交易
+      const signedTx = await account.signTransaction(txObject);
+      const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
+
+      successCount++;
+      outputDiv.innerHTML += `✅ Sent from ${account.address} to ${toAddress}:<br>
+        Tx Hash: <a href="https://base-sepolia.blockscout.com/tx/${receipt.transactionHash}" target="_blank">${receipt.transactionHash}</a><br>
+        Amount: ${web3.utils.fromWei(valueToSend, 'ether')} ETH<br><br>`;
+
+      // 延迟 3-5 秒，避免过快
+      const delay = Math.floor(Math.random() * (5000 - 3000 + 1)) + 3000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+
     } catch (error) {
-      console.error('Error sending transaction:', error);
-      throw { from: account.address, message: error.message };
+      failedCount++;
+      outputDiv.innerHTML += `❌ Error with account: ${error.message}<br>`;
     }
   }
 
-  return transactions;
-}
-
-async function calculateGasCost(from, toAddresses, gasPrice) {
-  const gasCostPromises = toAddresses.map(async to => {
-    const txObject = {
-      from: from,
-      to: to,
-      value: '0x0',  // 不涉及实际资金的传输，只计算gas
-      gasPrice: gasPrice
-    };
-    const gas = await web3.eth.estimateGas(txObject);
-    return gasPrice.mul(web3.utils.toBN(gas));
-  });
-
-  const gasCosts = await Promise.all(gasCostPromises);
-  return gasCosts.reduce((total, cost) => total.add(cost), web3.utils.toBN(0));
-}
-
-async function sendSingleTransaction(account, toAddress, value, gasPrice) {
-  const txObject = {
-    from: account.address,
-    to: toAddress,
-    value: web3.utils.toHex(value),
-    gasPrice: gasPrice
-  };
-
-  const gas = await web3.eth.estimateGas(txObject);
-
-  const transaction = {
-    ...txObject,
-    gas: gas
-  };
-
-  const signedTx = await account.signTransaction(transaction);
-  const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
-  console.log('Transaction successful:', receipt.transactionHash);
-  return receipt;
-}
+  // 输出结果
+  outputDiv.innerHTML += `<br>🎉 Completed: ${successCount} successful transactions, ${failedCount} failed.`;
+});
