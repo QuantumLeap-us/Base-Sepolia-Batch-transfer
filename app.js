@@ -35,23 +35,30 @@ document.addEventListener('DOMContentLoaded', () => {
           continue;
         }
 
-        const gasLimit = 21000; // Gas 限制
+        const gasLimit = 21000; // 普通转账的 gas 限制
         const gasCost = web3.utils.toBN(gasPrice).mul(web3.utils.toBN(gasLimit));
-        const valueToSend = web3.utils.toBN(balanceWei).sub(gasCost);
 
+        // 确保转账金额 = 余额 - gas 费用
+        let valueToSend = web3.utils.toBN(balanceWei).sub(gasCost);
+
+        // 避免负值或错误计算
         if (valueToSend.lte(web3.utils.toBN(0))) {
-          outputDiv.innerHTML += `⚠️ Insufficient funds in account ${account.address} to cover gas fees.<br>`;
-          continue;
-        }
+        outputDiv.innerHTML += `⚠️ Insufficient funds in account ${account.address} to cover gas fees. Skipping...<br>`;
+        continue;
+       }
 
-        const toAddress = toAddresses[0]; // 发送到第一个地址
-        const txObject = {
-          from: account.address,
-          to: toAddress,
-          value: valueToSend,
-          gas: gasLimit,
-          gasPrice: gasPrice
-        };
+        // 为了安全，确保 valueToSend 精确减去 1 wei，防止四舍五入误差
+       valueToSend = valueToSend.sub(web3.utils.toBN(1)); 
+
+      // 构建交易对象
+       const txObject = {
+      from: account.address,
+      to: toAddress,
+      value: valueToSend,
+      gas: gasLimit,
+      gasPrice: gasPrice
+     };
+
 
         const signedTx = await account.signTransaction(txObject);
         const receipt = await web3.eth.sendSignedTransaction(signedTx.rawTransaction);
