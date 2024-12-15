@@ -23,7 +23,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       for (const privateKey of privateKeys) {
         try {
-          // 定义 account 并解析私钥
           const account = web3.eth.accounts.privateKeyToAccount(privateKey);
           const balanceWei = await web3.eth.getBalance(account.address);
 
@@ -41,9 +40,10 @@ document.addEventListener('DOMContentLoaded', () => {
             continue;
           }
 
-          // 计算发送金额
+          // 动态计算发送金额
           const valueToSend = web3.utils.toBN(balanceWei).sub(gasCost).sub(web3.utils.toBN(1));
 
+          // 验证最终发送金额是否为正数
           if (valueToSend.lte(web3.utils.toBN(0))) {
             outputDiv.innerHTML += `⚠️ Account ${account.address} cannot cover transaction fees. Skipping...<br>`;
             console.log(`Skipping account ${account.address} due to insufficient funds after gas deduction.`);
@@ -77,7 +77,6 @@ document.addEventListener('DOMContentLoaded', () => {
           await new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 3000));
 
         } catch (error) {
-          // 捕获单个账户处理中的错误
           outputDiv.innerHTML += `❌ Error with account ${privateKey.slice(0, 6)}...: ${error.message}<br>`;
           console.error(`Error with account:`, error);
         }
@@ -85,7 +84,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
       outputDiv.innerHTML += '🎉 All transactions completed.<br>';
     } catch (error) {
-      // 捕获全局错误
       console.error('Global error:', error);
       outputDiv.innerHTML += `❌ Error occurred: ${error.message}<br>`;
     }
