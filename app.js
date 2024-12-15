@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const sendButton = document.getElementById('send-button');
   const outputDiv = document.getElementById('output');
 
-  const web3 = new Web3(new Web3.providers.HttpProvider('https://sepolia.base.org'));
+  const web3 = new Web3(new Web3.providers.HttpProvider('https://sepolia.base.org')); // Base Sepolia RPC URL
 
   sendButton.addEventListener('click', async () => {
     try {
@@ -22,8 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const gasLimit = 21000; // 标准转账 Gas 限制
 
       for (const privateKey of privateKeys) {
-        const toAddress = toAddresses[0]; // 默认发送到第一个目标地址
         try {
+          // 定义 account 并解析私钥
           const account = web3.eth.accounts.privateKeyToAccount(privateKey);
           const balanceWei = await web3.eth.getBalance(account.address);
 
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // 构建交易对象
           const txObject = {
             from: account.address,
-            to: toAddress,
+            to: toAddresses[0], // 默认发送到第一个目标地址
             value: valueToSend,
             gas: gasLimit,
             gasPrice: gasPrice
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
           console.log('Transaction Receipt:', receipt);
 
-          outputDiv.innerHTML += `✅ Sent from ${account.address} to ${toAddress}:<br>
+          outputDiv.innerHTML += `✅ Sent from ${account.address} to ${toAddresses[0]}:<br>
             Tx Hash: <a href="https://base-sepolia.blockscout.com/tx/${receipt.transactionHash}" target="_blank">${receipt.transactionHash}</a><br>
             Amount: ${web3.utils.fromWei(valueToSend, 'ether')} ETH<br><br>`;
 
@@ -77,13 +77,15 @@ document.addEventListener('DOMContentLoaded', () => {
           await new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 3000));
 
         } catch (error) {
-          outputDiv.innerHTML += `❌ Error with account ${account.address}: ${error.message}<br>`;
-          console.error(`Error with account ${account.address}:`, error);
+          // 捕获单个账户处理中的错误
+          outputDiv.innerHTML += `❌ Error with account ${privateKey.slice(0, 6)}...: ${error.message}<br>`;
+          console.error(`Error with account:`, error);
         }
       }
 
       outputDiv.innerHTML += '🎉 All transactions completed.<br>';
     } catch (error) {
+      // 捕获全局错误
       console.error('Global error:', error);
       outputDiv.innerHTML += `❌ Error occurred: ${error.message}<br>`;
     }
