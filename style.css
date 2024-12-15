@@ -3,6 +3,7 @@ body {
   margin: 0;
   padding: 0;
   font-family: Arial, sans-serif;
+  background-color: #f9f9f9;
 }
 
 .container {
@@ -10,19 +11,21 @@ body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  height: 100vh;
+  min-height: 100vh;
+  padding: 1rem;
 }
 
-header{
+header {
   display: flex;
   height: 100px;
+  align-items: center;
+  justify-content: center;
 }
 
 .logo {
-  height: 100px;
-  margin-left: 100px;
+  height: 80px;
+  margin-left: 20px;
 }
-
 
 h1 {
   font-size: 2rem;
@@ -32,10 +35,9 @@ h1 {
 
 h2 {
   font-size: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   text-align: left;
 }
-
 
 p {
   font-size: 1rem;
@@ -47,42 +49,44 @@ form {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1rem;
-  background-color: #f2f2f2;
-  border-radius: 5px;
-  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+  padding: 1.5rem;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
   box-sizing: border-box;
+  max-width: 900px;
   width: 100%;
-  height: 600px;
-  
+  margin-bottom: 2rem;
 }
 
 form div {
+  width: 100%;
   margin-bottom: 1rem;
 }
 
-
 input[type="text"],
 textarea {
-  padding: 0.5rem;
+  padding: 0.75rem;
   border-radius: 5px;
-  border: none;
+  border: 1px solid #ddd;
   box-sizing: border-box;
-  width: 800px;
-  }
-
-textarea {
-  resize: none;
-  
+  width: 100%;
+  font-size: 1rem;
 }
 
+textarea {
+  resize: vertical;
+  min-height: 150px;
+  max-height: 300px;
+}
 
 button {
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1.5rem;
   background-color: #008CBA;
   color: #fff;
   border: none;
   border-radius: 5px;
+  font-size: 1rem;
   cursor: pointer;
   transition: all 0.3s ease-in-out;
 }
@@ -98,79 +102,58 @@ button:hover {
   background-color: #f2f2f2;
   border-radius: 5px;
   box-sizing: border-box;
+  max-width: 900px;
   width: 100%;
-  align-items: center;
-
-}
-
-
-
-
-#output {
-  display: inline-block;
-  width: 800px;
-  min-height: 100px;
-  padding: 5px;
-  border: 1px solid #ccc;
-  font-family: monospace;
-  white-space: pre-line;
-  background-color: #fff;
   margin: 0 auto;
 }
 
-
-
-
-
-#private-keys {
-  height: 300px;
-  display: block;
-  overflow: auto;
-}
-
-#to-addresses {
-  height: 200px;
-  resize: vertical;
+#output {
+  width: 100%;
+  min-height: 150px;
   padding: 10px;
-  font-size: 16px;
+  border: 1px solid #ccc;
   font-family: monospace;
+  background-color: #fff;
+  box-sizing: border-box;
+  white-space: pre-line;
+  overflow: auto;
 }
 
 footer {
   margin-top: auto;
   background-color: #f2f2f2;
-  padding: 2rem;
+  padding: 1rem;
   text-align: center;
+  font-size: 0.9rem;
+  color: #333;
 }
 
 .footer-container {
   display: flex;
-  flex-direction: row;
   justify-content: center;
   align-items: center;
 }
 
-
+/* 响应式设计 */
 @media only screen and (max-width: 768px) {
-  /* Styles for screens smaller than 768px */
-  form {
-    height: auto;
+  form, .output-wrapper {
+    padding: 1rem;
+    box-shadow: none;
   }
-  
+
   input[type="text"], 
   textarea {
-    width: 90%;
+    width: 100%;
   }
 }
 
 @media only screen and (max-width: 480px) {
-  /* Styles for screens smaller than 480px */
   h1 {
     font-size: 1.5rem;
   }
-  
-  input[type="text"], 
-  textarea {
-    width: 100%;
+
+  button {
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
   }
 }
