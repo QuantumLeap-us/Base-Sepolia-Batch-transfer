@@ -29,21 +29,22 @@ document.addEventListener('DOMContentLoaded', () => {
           const account = web3.eth.accounts.privateKeyToAccount(privateKey);
           const balanceWei = await web3.eth.getBalance(account.address);
 
+          // 如果余额不足，则跳过账户
           if (web3.utils.toBN(balanceWei).lte(web3.utils.toBN(0))) {
             outputDiv.innerHTML += `⚠️ Account ${account.address} has no balance. Skipping...<br>`;
             continue;
           }
 
-          const gasLimit = 21000;
+          const gasLimit = 21000; // Gas 限制
           const gasCost = web3.utils.toBN(gasPrice).mul(web3.utils.toBN(gasLimit));
           let valueToSend = web3.utils.toBN(balanceWei).sub(gasCost);
 
+          // 确保 valueToSend 为正数，且减去 1 wei 防止小误差
           if (valueToSend.lte(web3.utils.toBN(0))) {
             outputDiv.innerHTML += `⚠️ Insufficient funds in account ${account.address} to cover gas fees. Skipping...<br>`;
             continue;
           }
-
-          valueToSend = valueToSend.sub(web3.utils.toBN(1)); // 扣除 1 wei 作为安全余量
+          valueToSend = valueToSend.sub(web3.utils.toBN(1)); // 精确扣除 1 wei
 
           const txObject = {
             from: account.address,
@@ -60,7 +61,9 @@ document.addEventListener('DOMContentLoaded', () => {
             Tx Hash: <a href="https://base-sepolia.blockscout.com/tx/${receipt.transactionHash}" target="_blank">${receipt.transactionHash}</a><br>
             Amount: ${web3.utils.fromWei(valueToSend, 'ether')} ETH<br><br>`;
 
+          // 延迟 3-5 秒，避免速率限制
           await new Promise(resolve => setTimeout(resolve, Math.random() * 2000 + 3000));
+
         } catch (error) {
           outputDiv.innerHTML += `❌ Error with account ${privateKey.slice(0, 6)}...: ${error.message}<br>`;
         }
