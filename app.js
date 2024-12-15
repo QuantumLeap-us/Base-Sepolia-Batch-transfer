@@ -34,16 +34,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
           console.log(`Gas Price: ${gasPrice} Wei, Gas Cost: ${gasCost} Wei`);
 
-          // 验证余额是否足够支付 Gas
+          // 检查余额是否足够支付 Gas
           if (web3.utils.toBN(balanceWei).lte(gasCost)) {
             outputDiv.innerHTML += `⚠️ Account ${account.address} has insufficient balance for gas fees. Skipping...<br>`;
             continue;
           }
 
           // 动态计算发送金额
-          const valueToSend = web3.utils.toBN(balanceWei).sub(gasCost).sub(web3.utils.toBN(1));
+          let valueToSend = web3.utils.toBN(balanceWei).sub(gasCost);
 
-          // 验证最终发送金额是否为正数
+          // 再次验证发送金额
           if (valueToSend.lte(web3.utils.toBN(0))) {
             outputDiv.innerHTML += `⚠️ Account ${account.address} cannot cover transaction fees. Skipping...<br>`;
             console.log(`Skipping account ${account.address} due to insufficient funds after gas deduction.`);
